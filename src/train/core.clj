@@ -2,7 +2,7 @@
   (:require [clojure.string :as clj-str]))
 
 (defn path-destination
-  "Path: list of [distance :src :dst] ([5 :A :B] [4 :B :C] [8 :C :D] "
+  "Path: list of [distance :src :dst], for instance ([5 :A :B] [4 :B :C] [8 :C :D] "
   [path]
   (->> path
        last
@@ -10,7 +10,7 @@
 
 (defn paths-from
   [graph src]
-  "Paths: a list of path to save all possible paths (([:C :D 8]) ([:C :E 2]))"
+  "Paths: a list of path to save all possible paths, for instance (([:C :D 8]) ([:C :E 2]))"
   (->> graph
        (filter #(= src (second %)))
        (map list)))
@@ -42,13 +42,13 @@
        (partition 2 1)))
 
 (defn check
-  "Check src and dst between input path and path"
+  "Compare two lists, check src and dst between input path and path"
   [input path]
   (= (mapcat identity input)
      (mapcat rest path)))
 
 (defn match-input-path
-  "Match input path"
+  "Match input path in explored paths"
   [graph input]
   (let [in (parse-input-path input)
         in-stops (count in)]
@@ -91,7 +91,7 @@
            count))))
 
 (defn shortest-path
-  "Worst scenario: we have to tranverse all nodes (n-1 stops)to reach dst"
+  "Worst scenario: we need n-1 stops to reach dst"
   [graph src dst]
   (let [dst-set (set (map last graph))
         n (count graph)]
@@ -143,3 +143,7 @@
     (println "Output #8:" (show-path (shortest-path g :A :C)))
     (println "Output #9:" (show-path (shortest-path g :B :B)))
     (println "Output #10:" (less-than-n g :C :C 30))))
+
+(defn -main [& args]
+  []
+  (train-print (or (first args) "Graph: AB5, BC4, CD8, DC8, DE6, AD5, CE2, EB3, AE7")))

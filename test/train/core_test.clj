@@ -3,5 +3,5 @@
             [train.core :refer :all]))
 
 (deftest a-test
-  (testing "FIXME, I fail."
+  (testing "Good test"
     (is (= 1 1))))

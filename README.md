@@ -1,10 +1,19 @@
-# train 
+# train
 
 A Clojure library designed to ... well, that part is up to you.
 
+
+
 ## Usage
 
-FIXME
+To run the demo with default input
+
+    lein run
+
+To run the demo
+
+    lein run "Graph: AB5, BC4, CD8, DC8, DE6, AD5, CE2, EB3"
+
 
 ## License
 
