@@ -42,7 +42,7 @@
        (partition 2 1)))
 
 (defn check
-  "Compare two lists, check src and dst between input path and path"
+  "Compare two lists, check src and dst between input path and explored path"
   [input path]
   (= (mapcat identity input)
      (mapcat rest path)))
@@ -99,31 +99,31 @@
       (->> (explore-paths graph src)
            (take-while #(> n (count %)))
            (filter #(= dst (path-destination %)))
-           (take 1)
            first))))
 
 (defn less-than-n
-  "The sum of distance is less than n"
+  "The sum of distance is less than n
+   When having max-count stops, the distance will be greater than n"
   [graph src dst n]
   (let [dst-set (set (map last graph))]
     (when (dst-set dst)
       (let [min-distance (apply min (map first graph))
-            max-count (/ n min-distance)]
+            max-count (inc (quot n min-distance))]
         (->> (explore-paths graph src)
-             (take-while #(>= max-count (count %)))
+             (take-while #(> max-count (count %)))
              (filter #(and (> n (distance %))
                            (= dst (path-destination %))))
              count)))))
 
 (defn parse-input
+  "Convert input to list"
   [input]
   (letfn [(process [s]
             (let [v (map str s)
                   n (Integer/parseInt (last v))]
               (->> v
                    drop-last
-                   (map clj-str/upper-case)
-                   (map keyword)
+                   (map (comp keyword clj-str/upper-case))
                    (cons n))))]
     (->> input
          (re-seq #"[a-zA-Z]{2}\d")
