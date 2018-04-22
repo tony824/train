@@ -14,6 +14,9 @@ To run the demo
 
     lein run "Graph: AB5, BC4, CD8, DC8, DE6, AD5, CE2, EB3"
 
+TODO:
+ 1) when n is big, we need new functions due to performance. we need a better way to take from iterating list
+ 2) ideally , use spec to generate input-path for the sake of test
 
 ## License
 

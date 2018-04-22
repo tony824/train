@@ -119,14 +119,14 @@
   "Convert input to list"
   [input]
   (letfn [(process [s]
-            (let [v (map str s)
-                  n (Integer/parseInt (last v))]
-              (->> v
-                   drop-last
+            (let [l (map str s)
+                  n (Integer/parseInt (apply str (nnext l)))]
+              (->> l
+                   (take 2)
                    (map (comp keyword clj-str/upper-case))
                    (cons n))))]
     (->> input
-         (re-seq #"[a-zA-Z]{2}\d")
+         (re-seq #"[a-zA-Z]{2}\d+")
          (map process))))
 
 (defn train-print
