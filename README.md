@@ -18,8 +18,8 @@ To run test
 
     lein test
 TODO:
- 1) when n is big, we need new functions due to performance. we need a better way to take from iterating list
- 2) ideally , use spec to generate input-path for the sake of test
+ 1) When both graph and n are big, there will be performance issues. we need a better way to take from iterating list
+ 2) When doing test, Clojure spec should be used to generate input-path.
 
 ## License
 

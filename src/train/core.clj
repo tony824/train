@@ -10,7 +10,7 @@
 
 (defn paths-from
   [graph src]
-  "Paths: a list of path to save all possible paths, for instance (([:C :D 8]) ([:C :E 2]))"
+  "Paths: a list of path to save all possible paths, for instance (([8 :C :D]) ([2 :C :E]))"
   (->> graph
        (filter #(= src (second %)))
        (map list)))
@@ -23,7 +23,7 @@
        (paths-from graph)
        (map (partial concat path))))
 
-(defn explore-paths
+(defn- explore-paths
   "Explore paths for a src"
   [graph src]
   (let [src-set (set (map second graph))]
