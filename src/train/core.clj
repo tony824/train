@@ -1,22 +1,37 @@
-(ns train.core
-  (:require [clojure.string :as clj-str]))
+(ns train.core)
+
+(defn path-distance
+  "Calculate the distance of a path"
+  [path]
+  (->> path
+       (map :distance)
+       (reduce +)))
+
+(defn show-path
+  [path]
+  (if (seq path)
+    (path-distance path)
+    "NO SUCH ROUTE"))
 
 (defn path-destination
-  "Path: list of [distance :src :dst], for instance ([5 :A :B] [4 :B :C] [8 :C :D] "
+  "Return the destination of the given path.
+   Path: a list of map contains keys :src, :dst and :distance,
+   e.g. ({:src 'A' :dst 'B' :distance 5} {:src 'B' :dst 'C' :distance 3})"
   [path]
   (->> path
        last
-       last))
+       :dst))
 
 (defn paths-from
   [graph src]
-  "Paths: a list of path to save all possible paths, for instance (([8 :C :D]) ([2 :C :E]))"
+  "Given a src, return all paths that start from src, each path is a list of one map"
   (->> graph
-       (filter #(= src (second %)))
+       (filter #(= src (:src %)))
        (map list)))
 
 (defn move
-  "Append all possiable next paths for a path"
+  "Start from the destination of a path, append all possible paths to the path.
+   Return a list of new paths for a given path, each new path is one step further than the given path"
   [graph path]
   (->> path
        path-destination
@@ -24,126 +39,124 @@
        (map (partial concat path))))
 
 (defn- explore-paths
-  "Explore paths for a src"
+  "Start from src, move some steps forward and explore all paths for each step.
+   NOTE: Should only be used with take-while."
   [graph src]
-  (let [src-set (set (map second graph))]
+  (let [src-set (set (map :src graph))]
     (when (src-set src)
       (->> src
            (paths-from graph)
            (iterate #(mapcat (partial move graph) %))
+           ;; iterate is returning [x, (f x), (f (f x)), ...],
+           ;; x is a list of paths with one stop,
+           ;; (f x) is a list of paths with 2 stops.
            (mapcat identity)))))
 
-(defn parse-input-path
-  "Parse input path: A-B-C"
-  [input]
-  (->> input
+(defn parse-input-route
+  "Parse input route: A-B-C, return a list of list like ((A B) (B C))"
+  [route]
+  (->> route
        (re-seq #"\w")
-       (map keyword)
        (partition 2 1)))
 
-(defn check
-  "Compare two lists, check src and dst between input path and explored path"
-  [input path]
-  (= (mapcat identity input)
-     (mapcat rest path)))
+(defn matching-path?
+  "Check src and dst between the parsed input route and an explored path (a list of map)"
+  [parsed-route path]
+  (= (mapcat identity parsed-route)
+     (mapcat (juxt :src :dst) path)))
 
-(defn match-input-path
-  "Match input path in explored paths"
-  [graph input]
-  (let [in (parse-input-path input)
-        in-stops (count in)]
-    (->> (ffirst in)
+(defn match-input-route
+  "Match input route like A-B-C and then explore paths"
+  [graph input-route]
+  (let [parsed-route (parse-input-route input-route)
+        stops        (count parsed-route)]
+    (->> (ffirst parsed-route)
          (explore-paths graph)
-         (take-while #(>= in-stops (count %)))
-         (filter (partial check in))
+         ;; Take paths whose stops is no greater than the specified number (stops)
+         (take-while #(>= stops (count %)))
+         (filter (partial matching-path? parsed-route))
          first)))
 
-(defn distance
-  "Calculate the distance of a path"
-  [path]
-  (->> path
-       (map first)
-       (reduce +)))
-
-(defn show-path
-  [path]
-  (if (seq path)
-    (distance path)
-    "NO SUCH ROUTE"))
-
 (defn max-n-stops
+  "Given a srt and a dst, retrun the number of paths who have up to n stops"
   [graph src dst n]
-  (let [dst-set (set (map last graph))]
+  (let [dst-set (set (map :dst graph))]
     (when (dst-set dst)
       (->> (explore-paths graph src)
+           ;; Take paths whose stops is no greater than n
            (take-while #(>= n (count %)))
            (filter #(= dst (path-destination %)))
            count))))
 
 (defn exact-n-stops
+  "Given a srt and a dst, return the number of paths who have exact n stops"
   [graph src dst n]
-  (let [dst-set (set (map last graph))]
+  (let [dst-set (set (map :dst graph))]
     (when (dst-set dst)
       (->> (explore-paths graph src)
+           ;; Take paths whose stops is no greater than n
            (take-while #(>= n (count %)))
            (filter #(and (= n (count %))
                          (= dst (path-destination %))))
            count))))
 
 (defn shortest-path
-  "Worst scenario: we need n-1 stops to reach dst"
+  "Given a srt and a dst, return the shortest path from src to dst.
+   The worst scenario: we need n-1 stops to reach dst"
   [graph src dst]
-  (let [dst-set (set (map last graph))
-        n (count graph)]
+  (let [dst-set (set (map :dst graph))
+        n       (count graph)]
     (when (dst-set dst)
       (->> (explore-paths graph src)
+           ;; Take paths whose stops is less than n
            (take-while #(> n (count %)))
            (filter #(= dst (path-destination %)))
            first))))
 
 (defn less-than-n
-  "The sum of distance is less than n
-   When having max-count stops, the distance will be greater than n"
-  [graph src dst n]
-  (let [dst-set (set (map last graph))]
+  "Given a src, a dst and a maximum distance max-distance,
+   return the number of paths whose distance is less than max-distance"
+  [graph src dst max-distance]
+  (let [dst-set (set (map :dst graph))]
     (when (dst-set dst)
-      (let [min-distance (apply min (map first graph))
-            max-count (inc (quot n min-distance))]
+      (let [min-distance (apply min (map :distance graph))
+            ;; when having max-stops, the distance will be greater than n
+            max-stops    (inc (quot max-distance min-distance))]
         (->> (explore-paths graph src)
-             (take-while #(> max-count (count %)))
-             (filter #(and (> n (distance %))
+             ;; Take paths who have less than max-stops
+             (take-while #(> max-stops (count %)))
+             (filter #(and (> max-distance (path-distance %))
                            (= dst (path-destination %))))
              count)))))
 
-(defn parse-input
-  "Convert input to list"
-  [input]
-  (letfn [(process [s]
-            (let [l (map str s)
-                  n (Integer/parseInt (apply str (nnext l)))]
-              (->> l
-                   (take 2)
-                   (map (comp keyword clj-str/upper-case))
-                   (cons n))))]
-    (->> input
-         (re-seq #"[a-zA-Z]{2}\d+")
-         (map process))))
+(defn parse-input-graph
+  "Convert input to a list of map like {:src 'A' :dst 'B' :distance 5}"
+  [graph-str]
+  (->> graph-str
+       (re-seq #"[a-zA-Z]{2}\d+")
+       (map (fn [s]
+              {:src      (-> s first str)
+               :dst      (-> s second str)
+               :distance (-> s last str Integer/parseInt)}))))
 
-(defn train-print
+(defn train-path-print
   "INPUT Graph: AB5, BC4, CD8, DC8, DE6, AD5, CE2, EB3, AE7"
-  [in]
-  (let [g (parse-input in)]
-    (println "Output #1:" (show-path (match-input-path g "A-B-C")))
-    (println "Output #2:" (show-path (match-input-path g "A-D")))
-    (println "Output #3:" (show-path (match-input-path g "A-D-C")))
-    (println "Output #4:" (show-path (match-input-path g "A-E-B-C-D")))
-    (println "Output #5:" (show-path (match-input-path g "A-E-D")))
-    (println "Output #6:" (max-n-stops g :C :C 3))
-    (println "Output #7:" (exact-n-stops g :A :C 4))
-    (println "Output #8:" (show-path (shortest-path g :A :C)))
-    (println "Output #9:" (show-path (shortest-path g :B :B)))
-    (println "Output #10:" (less-than-n g :C :C 30))))
+  [graph-str]
+  (let [g (parse-input-graph graph-str)]
+    (println "Output #1:"  (show-path (match-input-route g "A-B-C")))
+    (println "Output #2:"  (show-path (match-input-route g "A-D")))
+    (println "Output #3:"  (show-path (match-input-route g "A-D-C")))
+    (println "Output #4:"  (show-path (match-input-route g "A-E-B-C-D")))
+    (println "Output #5:"  (show-path (match-input-route g "A-E-D")))
+    (println "Output #6:"  (max-n-stops g "C" "C" 3))
+    (println "Output #7:"  (exact-n-stops g "A" "C" 4))
+    (println "Output #8:"  (show-path (shortest-path g "A" "C")))
+    (println "Output #9:"  (show-path (shortest-path g "B" "B")))
+    (println "Output #10:" (less-than-n g "C" "C" 30))))
 
 (defn -main [& args]
   []
-  (train-print (or (first args) "Graph: AB5, BC4, CD8, DC8, DE6, AD5, CE2, EB3, AE7")))
+
+  ;; path:  ({:src 'A' :dst 'B' :distance 5} {:src 'B' :dst 'C' :distance 3})
+  ;; route: A-B-C
+  (train-path-print (or (first args) "Graph: AB5, BC4, CD8, DC8, DE6, AD5, CE2, EB3, AE7")))
