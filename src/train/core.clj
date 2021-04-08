@@ -76,7 +76,7 @@
          first)))
 
 (defn max-n-stops
-  "Given a srt and a dst, retrun the number of paths who have up to n stops"
+  "Given a srt and a dst, return the number of paths who have up to n stops"
   [graph src dst n]
   (let [dst-set (set (map :dst graph))]
     (when (dst-set dst)
