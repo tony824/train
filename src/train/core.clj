@@ -38,10 +38,9 @@
        (paths-from graph)
        (map (partial concat path))))
 
-(defn- explore-paths
-  "Start from src, move some steps forward and explore all paths for each step.
-   NOTE: Should only be used with take-while."
-  [graph src]
+(defn explore-n-paths
+  "Start from src, move n steps forward and explore all paths for each step."
+  [graph n src]
   (let [src-set (set (map :src graph))]
     (when (src-set src)
       (->> src
@@ -50,6 +49,7 @@
            ;; iterate is returning [x, (f x), (f (f x)), ...],
            ;; x is a list of paths with one stop,
            ;; (f x) is a list of paths with 2 stops.
+           (take n)
            (mapcat identity)))))
 
 (defn parse-input-route
@@ -71,9 +71,7 @@
   (let [parsed-route (parse-input-route input-route)
         stops        (count parsed-route)]
     (->> (ffirst parsed-route)
-         (explore-paths graph)
-         ;; Take paths whose stops is no greater than the specified number (stops)
-         (take-while #(>= stops (count %)))
+         (explore-n-paths graph stops)
          (filter (partial matching-path? parsed-route))
          first)))
 
@@ -82,9 +80,7 @@
   [graph src dst n]
   (let [dst-set (set (map :dst graph))]
     (when (dst-set dst)
-      (->> (explore-paths graph src)
-           ;; Take paths whose stops is no greater than n
-           (take-while #(>= n (count %)))
+      (->> (explore-n-paths graph n src)
            (filter #(= dst (path-destination %)))
            count))))
 
@@ -93,9 +89,7 @@
   [graph src dst n]
   (let [dst-set (set (map :dst graph))]
     (when (dst-set dst)
-      (->> (explore-paths graph src)
-           ;; Take paths whose stops is no greater than n
-           (take-while #(>= n (count %)))
+      (->> (explore-n-paths graph n src)
            (filter #(and (= n (count %))
                          (= dst (path-destination %))))
            count))))
@@ -107,25 +101,21 @@
   (let [dst-set (set (map :dst graph))
         n       (count graph)]
     (when (dst-set dst)
-      (->> (explore-paths graph src)
-           ;; Take paths whose stops is less than n
-           (take-while #(> n (count %)))
+      (->> (explore-n-paths graph (dec n) src)
            (filter #(= dst (path-destination %)))
            first))))
 
 (defn less-than-n
-  "Given a src, a dst and a maximum distance max-distance,
+  "Given a src, a dst and a maximum distance max-path-distance,
    return the number of paths whose distance is less than max-distance"
-  [graph src dst max-distance]
+  [graph src dst max-path-distance]
   (let [dst-set (set (map :dst graph))]
     (when (dst-set dst)
       (let [min-distance (apply min (map :distance graph))
             ;; when having max-stops, the distance will be greater than n
-            max-stops    (inc (quot max-distance min-distance))]
-        (->> (explore-paths graph src)
-             ;; Take paths who have less than max-stops
-             (take-while #(> max-stops (count %)))
-             (filter #(and (> max-distance (path-distance %))
+            max-stops    (quot max-path-distance min-distance)]
+        (->> (explore-n-paths graph max-stops src)
+             (filter #(and (> max-path-distance (path-distance %))
                            (= dst (path-destination %))))
              count)))))
 
